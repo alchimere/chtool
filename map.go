@@ -13,10 +13,13 @@ func Map[T, U any](ctx context.Context, in <-chan (T), fn func(T) U) chan (U) {
 
 		for {
 			select {
-			case item := <-in:
+			case item, ok := <-in:
+				if !ok {
+					return
+				}
 				out <- fn(item)
 			case <-ctx.Done():
-				break
+				return
 			}
 		}
 	}()

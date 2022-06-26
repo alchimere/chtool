@@ -5,31 +5,8 @@ import (
 	"sync"
 )
 
-// Merge forwards elements of two channels into one
-func Merge[T any](ctx context.Context, ch1, ch2 <-chan (T)) chan (T) {
-	out := make(chan (T))
-
-	go func() {
-		defer close(out)
-
-		for {
-			select {
-			case item := <-ch1:
-				out <- item
-			case item := <-ch2:
-				out <- item
-			case <-ctx.Done():
-				break
-			}
-		}
-	}()
-
-	return out
-}
-
-// MultiMerge forwards elements of N channels into one
-// Using multiple goroutines is simpler than using reflect.Select
-func MultiMerge[T any](ctx context.Context, channels ...<-chan (T)) chan (T) {
+// Merge forwards elements of multiple channels into one
+func MergeMerge[T any](ctx context.Context, channels ...<-chan (T)) chan (T) {
 	out := make(chan (T))
 
 	go func() {
@@ -44,10 +21,13 @@ func MultiMerge[T any](ctx context.Context, channels ...<-chan (T)) chan (T) {
 				in := channels[idx]
 				for {
 					select {
-					case item := <-in:
+					case item, ok := <-in:
+						if !ok {
+							return
+						}
 						out <- item
 					case <-ctx.Done():
-						break
+						return
 					}
 				}
 			}(i)

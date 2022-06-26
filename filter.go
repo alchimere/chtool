@@ -13,12 +13,15 @@ func Filter[T any](ctx context.Context, in <-chan (T), fn func(T) bool) chan (T)
 
 		for {
 			select {
-			case item := <-in:
+			case item, ok := <-in:
+				if !ok {
+					return
+				}
 				if fn(item) {
 					out <- item
 				}
 			case <-ctx.Done():
-				break
+				return
 			}
 		}
 	}()
